@@ -101,4 +101,102 @@ public class UnitTest1
 
         Assert.Throws<ArgumentException>(()=> group.RecordContribution("Ama",-10m));
     }
+
+    
+    [Fact]
+    public void CloseWeek_ShouldRotatePayoutsInJoiningOrder()
+    {
+        var group = CreateGroup();
+
+        // Week 1: Ama receives the pot.
+        group.RecordContribution("Ama", 50.00m);
+        group.RecordContribution("Jacob", 50.00m);
+        group.RecordContribution("Yaw", 50.00m);
+
+        Assert.True(group.CloseWeek());
+
+        // Week 2: Kofi receives the pot.
+        group.RecordContribution("Ama", 50.00m);
+        group.RecordContribution("Jacob", 50.00m);
+        group.RecordContribution("Yaw", 50.00m);
+
+        Assert.True(group.CloseWeek());
+
+        Assert.Equal("Ama", group.PayoutHistory[0].RecipientName);
+        Assert.Equal("Jacob", group.PayoutHistory[1].RecipientName);
+        Assert.Equal(1, group.PayoutHistory[0].WeekNumber);
+        Assert.Equal(2, group.PayoutHistory[1].WeekNumber);
+    }
+
+    [Fact]
+    public void CloseWeek_ShouldCompleteAfterEveryMemberReceivesPayout()
+    {
+        var group = CreateGroup();
+
+        for (int week = 1; week <= 3; week++)
+        {
+            group.RecordContribution("Ama", 50.00m);
+            group.RecordContribution("Jacob", 50.00m);
+            group.RecordContribution("Yaw", 50.00m);
+
+            Assert.True(group.CloseWeek());
+        }
+
+        Assert.True(group.IsComplete);
+        Assert.Equal(3, group.PayoutHistory.Count);
+        Assert.Equal("Yaw", group.PayoutHistory[2].RecipientName);
+
+        Assert.Throws<InvalidOperationException>(
+            () => group.CloseWeek());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-50)]
+    [InlineData(50.555)]
+    public void Constructor_ShouldRejectInvalidWeeklyContribution(
+        decimal amount)
+    {
+        Assert.Throws<ArgumentException>(
+            () => new SusuGroup(amount));
+    }
+
+    [Fact]
+    public void AddMember_ShouldRejectAdditionAfterContributionsStart()
+    {
+        var group = CreateGroup();
+
+        group.RecordContribution("Ama", 10.00m);
+
+        Assert.Throws<InvalidOperationException>(
+            () => group.AddMember("Yaw"));
+
+        Assert.Equal(3, group.Members.Count);
+    }
+
+    [Fact]
+    public void RecordContribution_ShouldRejectMoreThanTwoDecimalPlaces()
+    {
+        var group = CreateGroup();
+
+        Assert.Throws<ArgumentException>(
+            () => group.RecordContribution("Ama", 10.555m));
+
+        Assert.Empty(group.GetPaidInFullMembers());
+        Assert.Equal(50.00m,
+            group.GetOutstandingBalances()["Ama"]);
+    }
+
+    [Fact]
+    public void CloseWeek_ShouldRejectGroupWithoutMembers()
+    {
+        var group = new SusuGroup(50.00m);
+
+        Assert.Throws<InvalidOperationException>(
+            () => group.CloseWeek());
+
+        Assert.Equal(1, group.CurrentWeek);
+        Assert.Empty(group.PayoutHistory);
+    }
+
 }
