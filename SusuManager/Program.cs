@@ -35,7 +35,7 @@ while (running)
     Console.WriteLine("1. Add Member");
     Console.WriteLine("2. Record Contribution");
     Console.WriteLine("3. Close current Week");
-    Console.WriteLine(" 4. View Report");
+    Console.WriteLine("14. View Report");
     Console.WriteLine("5. Exit");
     Console.WriteLine("Choose an option (1-5):");
 
@@ -101,31 +101,37 @@ while (running)
                 break;
 
             case "4":
-                Console.WriteLine($"\nCurrent week: {group.CurrentWeek}");
-                Console.WriteLine(
-                    $"Weekly contribution: GHS {group.WeeklyContribution:F2}");
+                Console.WriteLine("\n === Susu Group Report ===");
 
-                Console.WriteLine("\nMember payment status:");
+                if (group.IsComplete)
+                {
+                    Console.WriteLine($"Susu cycle complete. Final week: {group.CurrentWeek}");
 
+                }
+                else
+                {
+                    Console.WriteLine($"Current week: {group.CurrentWeek}");
+                }
+
+                Console.WriteLine($"Weekly Conrtribution: GHS {group.WeeklyContribution:F2}");
+
+                var paidMembers = group.GetPaidInFullMembers();
+                var outstandingBalances = group.GetOutstandingBalances();
+
+                Console.WriteLine("\n Member payment Status:");
                 foreach (var member in group.Members)
                 {
-                    decimal owed = group.GetOutstandingBalances()
-                        .GetValueOrDefault(member.Name);
-
-                    if (owed == 0)
+                    if (paidMembers.Contains(member.Name))
                     {
-                        Console.WriteLine(
-                            $"- {member.Name}: Paid in full");
+                        Console.WriteLine($"- {member.Name} : Paid in full");
                     }
                     else
                     {
-                        Console.WriteLine(
-                            $"- {member.Name}: Owes GHS {owed:F2}");
+                        decimal owed =outstandingBalances[member.Name];
+                        Console.WriteLine($"- {member.Name}: Owes GHS {owed:F2}");
                     }
                 }
-
-                Console.WriteLine("\nPayout history:");
-
+                Console.WriteLine("\n Payout History");
                 if (group.PayoutHistory.Count == 0)
                 {
                     Console.WriteLine("No payouts recorded yet.");
@@ -134,17 +140,11 @@ while (running)
                 {
                     foreach (var payout in group.PayoutHistory)
                     {
-                        Console.WriteLine(
-                            $"- Week {payout.WeekNumber}: " +
-                            $"{payout.RecipientName} received GHS {payout.Amount:F2}");
+                        Console.WriteLine($"- Week {payout.WeekNumber}: " +
+                        $"{payout.RecipientName} received" +
+                        $"GHS {payout.Amount:F2}");
                     }
                 }
-
-                if (group.IsComplete)
-                {
-                    Console.WriteLine("\nThe susu cycle is complete.");
-                }
-
                 break;
             case "5":
                 running = false;
